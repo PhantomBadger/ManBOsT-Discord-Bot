@@ -66,6 +66,7 @@ namespace DiscordBot
             discordClient.AddService<ModuleService>();
             discordClient.AddModule<AdminModule>();
             discordClient.AddModule<AuntyDonnaModule>();
+            discordClient.AddModule<HummingbirdModule>();
 
             //Set up the command throttle
             commandThrottle = new Dictionary<string, DateTime>();
