@@ -60,7 +60,10 @@ namespace DiscordBot
                 .Parameter("Query", ParameterType.Required)
                 .Do(async e =>
                 {
-                    await e.Channel.SendMessage(SearchForAnime(e.GetArg("Query"), e));
+                    if (!BotHandler.TestForThrottle("animesearch", e.User.Name))
+                    {
+                        await e.Channel.SendMessage(SearchForAnime(e.GetArg("Query"), e));
+                    }
                 });
             });
         }
