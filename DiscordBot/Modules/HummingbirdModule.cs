@@ -70,7 +70,7 @@ namespace DiscordBot
             try
             {
                 //Output Log Message
-                Configuration.LogMessage("[Command] " + e.User.Name + " searched Hummingbird for '" + query);
+                Configuration.LogMessage("[Command] " + e.User.Name + " searched Hummingbird for '" + query + "'");
 
                 //Construct our web request url
                 string requestUrl = @"http://hummingbird.me/api/v1/search/anime/?query=";
@@ -111,13 +111,14 @@ namespace DiscordBot
 
                     if (responseObj.Length <= 0)
                     {
+                        Configuration.LogMessage("[Command] Couldn't find any anime with that query");
                         return "Cannot find any anime by that name";
                     }
 
                     Anime foundAnime = responseObj[0];
 
                     string message =
-                        "**MAL ID:** " + foundAnime.mal_id + "\n" +
+                        "**MAL:** " + foundAnime.mal_id + "\n" +
                         "**Title:** " + foundAnime.title + "\n" +
                         "**Status:** " + foundAnime.status + "\n" +
                         "**Episode Count:** " + foundAnime.episode_count + "\n" +
