@@ -20,22 +20,24 @@ namespace DiscordBot
         public static Configuration config;
         const string configFileName = "DiscordBot_Config.txt";
 
+        public static Dictionary<string, DateTime> commandThrottle;
+
         public void Launch()
         {
             //Load up the Config File
+            config = new Configuration();
             if (!File.Exists(configFileName))
             {
                 //Make a new Config File
-                config = new Configuration();
                 config.UserSetup();
-                config.WriteConfig(configFileName);
             }
             else
             {
                 //Load up the existing one
-                config = Configuration.LoadConfig(configFileName);
+                config.LoadConfig(configFileName);
                 Configuration.LogMessage("[Setup] Loaded Config File!");
             }
+            config.WriteConfig(configFileName);
 
             //Create the client
             discordClient = new DiscordClient();
@@ -65,6 +67,9 @@ namespace DiscordBot
             discordClient.AddModule<AdminModule>();
             discordClient.AddModule<AuntyDonnaModule>();
 
+            //Set up the command throttle
+            commandThrottle = new Dictionary<string, DateTime>();
+
             //Set up the Commands
             CommandSetup();
 
@@ -81,8 +86,24 @@ namespace DiscordBot
                 .Parameter("Query", ParameterType.Required)
                 .Do(e =>
                 {
-                    Configuration.LogMessage("[Command] " + e.User.Name + " is searching YouTube for: " + e.GetArg("Query"));
-                    SearchYoutube(e.GetArg("Query"), e).Wait();
+                    if (!TestForThrottle("youtubesearch", e.User.Name))
+                    {
+                        Configuration.LogMessage("[Command] " + e.User.Name + " is searching YouTube for: " + e.GetArg("Query"));
+                        SearchYoutube(e.GetArg("Query"), e).Wait();
+                    }
+                });
+
+            //Display Version Number
+            discordClient.GetService<CommandService>().CreateCommand("versionno")
+                .Alias(new string[] { "version", "versionnumber" })
+                .Description("Posts the current version number of the bot")
+                .Do(async e =>
+                {
+                    if (!TestForThrottle("versionno", e.User.Name))
+                    {
+                        Configuration.LogMessage("[Command] " + e.User.Name + " is checking the version number");
+                        await e.Channel.SendMessage("The current version number of ManBOsT is: " + Configuration.VersionNo);
+                    }
                 });
         }
 
@@ -106,8 +127,12 @@ namespace DiscordBot
                              text.Contains("greetings traveller") ||
                              text.Contains("greeting")))
                     {
-                        Configuration.LogMessage("[Event] Saying Hello to " + e.User.Name);
-                        await e.Channel.SendMessage("Hello, Little Girl " + e.User.Mention);
+                        if (!TestForThrottle("hello", e.User.Name))
+                        {
+
+                            Configuration.LogMessage("[Event] Saying Hello to " + e.User.Name);
+                            await e.Channel.SendMessage("Hello, Little Girl " + e.User.Mention);
+                        }
                     }
                 }
             };
@@ -120,15 +145,21 @@ namespace DiscordBot
                     //If Emma connects
                     if (AdminModule.specificUsers.ContainsKey("emma") && e.After.Id == AdminModule.specificUsers["emma"])
                     {
-                        Configuration.LogMessage("[Event] Saying Hi to Emma");
-                        await e.After.Server.DefaultChannel.SendMessage("Hello, Slut! " + e.After.Mention);
+                        if (!TestForThrottle("helloemma", e.After.Name))
+                        {
+                            Configuration.LogMessage("[Event] Saying Hi to Emma");
+                            await e.After.Server.DefaultChannel.SendMessage("Hello, Slut! " + e.After.Mention);
+                        }
                     }
 
                     //If Liam connects
                     if (AdminModule.specificUsers.ContainsKey("liam") && e.After.Id == AdminModule.specificUsers["liam"])
                     {
-                        Configuration.LogMessage("[Event] Reminding Liam of UnrealScript");
-                        await e.After.Server.DefaultChannel.SendMessage("How's that UnrealScript going " + e.Before.Mention + "?");
+                        if (!TestForThrottle("helloliam", e.After.Name))
+                        {
+                            Configuration.LogMessage("[Event] Reminding Liam of UnrealScript");
+                            await e.After.Server.DefaultChannel.SendMessage("How's that UnrealScript going " + e.Before.Mention + "?");
+                        }
                     }
                 }
             };
@@ -193,6 +224,35 @@ namespace DiscordBot
 
             //We havent found any videos
             await e.Channel.SendMessage("Can't find any video with the query \"" + query + "\""); 
+        }
+
+        public static bool TestForThrottle(string commandName, string user)
+        {
+            if (commandThrottle.ContainsKey(commandName))
+            {
+                //Throttle the command if it's less than our throttle limit
+                if (DateTime.Now - commandThrottle[commandName] > config.ThrottleLimit)
+                {
+                    commandThrottle[commandName] = DateTime.Now;
+                    return false;
+                }
+                else
+                {
+                    Configuration.LogMessage("[Info] Throttling Command " + commandName + " from user " + user + " due to excessive calls");
+                    return true;
+                }
+            }
+            else
+            {
+                if (commandThrottle == null)
+                {
+                    commandThrottle = new Dictionary<string, DateTime>();
+                }
+
+                //Add the command to our dictionary
+                commandThrottle.Add(commandName, DateTime.Now);
+                return false;
+            }
         }
     }
 }

@@ -43,7 +43,7 @@ namespace DiscordBot
                         .Do(async e =>
                         {
                         //Check that it's an admin
-                        if (specificUsers.ContainsKey("dev") && e.User.Id == AdminModule.specificUsers["dev"])
+                        if (specificUsers.ContainsKey("dev") && e.User.Id == AdminModule.specificUsers["dev"] && !BotHandler.TestForThrottle("adminadduser", e.User.Name))
                             {
                                 string userName = e.GetArg("User Name");
                                 string userIDRaw = e.GetArg("User ID");
@@ -85,7 +85,7 @@ namespace DiscordBot
                         .Do(async e =>
                         {
                             //Check that it's an admin
-                            if (specificUsers.ContainsKey("dev") && e.User.Id == AdminModule.specificUsers["dev"])
+                            if (specificUsers.ContainsKey("dev") && e.User.Id == AdminModule.specificUsers["dev"] && !BotHandler.TestForThrottle("admingetusers", e.User.Name))
                             {
                                 string message = "";
                                 for (int i = 0; i < specificUsers.Count; i++)
@@ -108,7 +108,7 @@ namespace DiscordBot
                         .Parameter("game", ParameterType.Required)
                         .Do(async e =>
                         {
-                            if (specificUsers.ContainsKey("dev") && e.User.Id == AdminModule.specificUsers["dev"])
+                            if (specificUsers.ContainsKey("dev") && e.User.Id == AdminModule.specificUsers["dev"] && !BotHandler.TestForThrottle("adminsetgame", e.User.Name))
                             {
                                 string gameName = e.GetArg("game");
 
@@ -134,7 +134,11 @@ namespace DiscordBot
                 if (!e.Message.IsAuthor)
                 {
                     //Dev Goodnight
-                    if (e.Message.IsMentioningMe() && e.Message.Text.ToLower().Contains("goodnight") && specificUsers.ContainsKey("dev") && e.User.Id == AdminModule.specificUsers["dev"])
+                    if (e.Message.IsMentioningMe() &&
+                        e.Message.Text.ToLower().Contains("goodnight") &&
+                        specificUsers.ContainsKey("dev") &&
+                        e.User.Id == AdminModule.specificUsers["dev"] &&
+                        !BotHandler.TestForThrottle("goodbye", e.User.Name))
                     {
                         Configuration.LogMessage("[Event] Posting Dramatic Goodbye as the Dev Kills me");
                         await e.Channel.SendMessage("Remember me, and tell my tale...for I....was...a bull");

@@ -49,8 +49,11 @@ namespace DiscordBot
                     .Description("Posts a random Aunty Donna quote from my limited library")
                     .Do(async e =>
                     {
-                        Configuration.LogMessage("[Command] " + e.User.Name + " is requesting a quote");
-                        await e.Channel.SendMessage(GetRandomAuntyDonnaQuote());
+                        if (!BotHandler.TestForThrottle("auntydonnnaquote", e.User.Name))
+                        {
+                            Configuration.LogMessage("[Command] " + e.User.Name + " is requesting a quote");
+                            await e.Channel.SendMessage(GetRandomAuntyDonnaQuote());
+                        }
                     });
 
                 //Random Aunty Donna Video
@@ -59,9 +62,12 @@ namespace DiscordBot
                     .Description("Posts a random Aunty Donna video")
                     .Do(async e =>
                     {
-                        Configuration.LogMessage("[Command] " + e.User.Name + " is requesting a video");
-                        await e.Channel.SendMessage("What do you think, of this?");
-                        await e.Channel.SendMessage(GetRandomAuntyDonnaVideo());
+                        if (!BotHandler.TestForThrottle("auntydonnavid", e.User.Name))
+                        {
+                            Configuration.LogMessage("[Command] " + e.User.Name + " is requesting a video");
+                            await e.Channel.SendMessage("What do you think, of this?");
+                            await e.Channel.SendMessage(GetRandomAuntyDonnaVideo());
+                        }
                     });
 
                 //Suggest AD Quote
@@ -71,8 +77,11 @@ namespace DiscordBot
                     .Parameter("Quote", ParameterType.Required)
                     .Do(async e =>
                     {
-                        Configuration.LogMessage("[Command] " + e.User.Id + " has suggested the quote " + e.GetArg("Quote"));
-                        await e.Channel.SendMessage(SuggestAuntyDonnaQuote(e.GetArg("Quote"), e));
+                        if (!BotHandler.TestForThrottle("auntydonnasuggestion", e.User.Name))
+                        {
+                            Configuration.LogMessage("[Command] " + e.User.Id + " has suggested the quote " + e.GetArg("Quote"));
+                            await e.Channel.SendMessage(SuggestAuntyDonnaQuote(e.GetArg("Quote"), e));
+                        }
                     });
 
                 //See all pending quotes
@@ -81,8 +90,11 @@ namespace DiscordBot
                     .Description("Posts all Aunty Donna Quotes Pending Approval")
                     .Do(async e =>
                     {
-                        Configuration.LogMessage("[Command] " + e.User.Name + " is requesting a list of pending quotes");
-                        await e.Channel.SendMessage(DisplayPendingAuntyDonnaQuotes());
+                        if (!BotHandler.TestForThrottle("auntydonnapending", e.User.Name))
+                        {
+                            Configuration.LogMessage("[Command] " + e.User.Name + " is requesting a list of pending quotes");
+                            await e.Channel.SendMessage(DisplayPendingAuntyDonnaQuotes());
+                        }
                     });
             });
 
@@ -98,15 +110,18 @@ namespace DiscordBot
                     //Discuss
                     if (text.ToLower().Contains("discuss"))
                     {
-                        Configuration.LogMessage("[Event] Someone said 'Discuss' so I posted a meme");
-                        await e.Channel.SendMessage("I'll treat you like a discus you piece of shit!");
+                        if (!BotHandler.TestForThrottle("auntydonnadiscuss", e.User.Name))
+                        {
+                            Configuration.LogMessage("[Event] Someone said 'Discuss' so I posted a meme");
+                            await e.Channel.SendMessage("I'll treat you like a discus you piece of shit!");
+                        }
                     }
 
                     //Private message to me
                     if (e.Message.Channel.IsPrivate)
                     {
                         //If it is from the dev
-                        if (AdminModule.specificUsers.ContainsKey("dev") && e.Message.User.Id == AdminModule.specificUsers["dev"])
+                        if (AdminModule.specificUsers.ContainsKey("dev") && e.Message.User.Id == AdminModule.specificUsers["dev"] && !BotHandler.TestForThrottle("pendingquoteresponse", e.User.Name))
                         {
                             //Check to see if the message follows the format required to approve a quote
                             if (Regex.IsMatch(e.Message.Text, AuntyDonnaModule.pendingReplyFormat))
