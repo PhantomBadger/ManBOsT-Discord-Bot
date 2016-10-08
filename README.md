@@ -1,12 +1,12 @@
 # ManBOsT-Discord-Bot
-A Discord Bot using Discord.Net, based off of the Australian Comedy Group "Aunty Donna". Some strong language inside.
+A Discord Bot using Discord.Net 0.9, based off of the Australian Comedy Group "Aunty Donna". Some strong language inside.
 
 # How to Build
 I built this using Visual Studio, and can only guarantee that it will work with that.
 
 Not going to lie, it had a load of dependencies, but you should only need to manually get the following off of NuGet
 
-- Discord.Net
+- Discord.Net 0.9
 - Newtonsoft.Json
 - Google.Apis.YouTube.v3
 
