@@ -9,8 +9,6 @@ using Discord.Modules;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
-using Google.Apis.Services;
-using Google.Apis.YouTube.v3;
 
 namespace DiscordBot
 {
@@ -36,6 +34,7 @@ namespace DiscordBot
                 //Load up the existing one
                 config.LoadConfig(configFileName);
                 Configuration.LogMessage("[Setup] Loaded Config File!");
+                
             }
             config.WriteConfig(configFileName);
 
@@ -67,6 +66,7 @@ namespace DiscordBot
             discordClient.AddModule<AdminModule>();
             discordClient.AddModule<AuntyDonnaModule>();
             discordClient.AddModule<HummingbirdModule>();
+            discordClient.AddModule<YouTubeModule>();
 
             //Set up the command throttle
             commandThrottle = new Dictionary<string, DateTime>();
@@ -80,20 +80,6 @@ namespace DiscordBot
 
         private void CommandSetup()
         {
-            //Search YouTube
-            discordClient.GetService<CommandService>().CreateCommand("YouTubeSearch")
-                .Alias(new string[] { "yt", "youtube", "video" })
-                .Description("Posts the first YouTube video found with the provided Query")
-                .Parameter("Query", ParameterType.Required)
-                .Do(e =>
-                {
-                    if (!TestForThrottle("youtubesearch", e.User.Name))
-                    {
-                        Configuration.LogMessage("[Command] " + e.User.Name + " is searching YouTube for: " + e.GetArg("Query"));
-                        SearchYoutube(e.GetArg("Query"), e).Wait();
-                    }
-                });
-
             //Display Version Number
             discordClient.GetService<CommandService>().CreateCommand("versionno")
                 .Alias(new string[] { "version", "versionnumber" })
@@ -126,7 +112,8 @@ namespace DiscordBot
                              text.Contains("hi") ||
                              text.Contains("hey") ||
                              text.Contains("greetings traveller") ||
-                             text.Contains("greeting")))
+                             text.Contains("greeting") ||
+                             text.Contains("hiya")))
                     {
                         if (!TestForThrottle("hello", e.User.Name))
                         {
@@ -177,7 +164,7 @@ namespace DiscordBot
                         await discordClient.Connect(config.DiscordToken, TokenType.Bot);
 
                         //Set the starting game
-                        discordClient.SetGame("Catz 5");
+                        discordClient.SetGame("Petz 5");
                         Configuration.LogMessage("[Setup] Setting Game to " + discordClient.CurrentGame.Name);
 
                         Configuration.LogMessage("[Info] Ready!");
@@ -191,40 +178,6 @@ namespace DiscordBot
                     }
                 }
             });
-        }
-
-        private async Task SearchYoutube(string query, CommandEventArgs e)
-        {
-            //Set up the YT Service
-            YouTubeService ytService = new YouTubeService(new BaseClientService.Initializer()
-            {
-                ApiKey = config.YouTubeToken,
-                ApplicationName = this.GetType().ToString()
-            });
-
-            //Search using the query
-            SearchResource.ListRequest searchListRequest = ytService.Search.List("snippet");
-            searchListRequest.Q = query;
-
-            //Get the search results
-            var searchListResponse = await searchListRequest.ExecuteAsync();
-
-            //Post the first one
-            foreach (var searchResult in searchListResponse.Items)
-            {
-                if (searchResult.Id.Kind == "youtube#video")
-                {
-                    string url = "https://www.youtube.com/watch?v=" + searchResult.Id.VideoId;
-
-                    Configuration.LogMessage("[Command] Posting YouTube Video " + url);
-
-                    await e.Channel.SendMessage(url);
-                    return;
-                }
-            }
-
-            //We havent found any videos
-            await e.Channel.SendMessage("Can't find any video with the query \"" + query + "\""); 
         }
 
         public static bool TestForThrottle(string commandName, string user)

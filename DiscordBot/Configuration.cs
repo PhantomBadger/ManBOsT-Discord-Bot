@@ -15,7 +15,7 @@ namespace DiscordBot
         public string YouTubeToken { get; set; }
         public TimeSpan ThrottleLimit { get; set; }
         public static int MaxLogCharLength { get; set; } = 70;
-        public static double VersionNo { get; set; } = 1.1;
+        public static double VersionNo { get; set; } = 1.2;
 
         public Configuration()
         {
