@@ -16,9 +16,12 @@ namespace DiscordBot
     {
         DiscordClient discordClient;
         public static Configuration config;
-        const string configFileName = "DiscordBot_Config.txt";
 
+        const string configFileName = "DiscordBot_Config.txt";
         public static Dictionary<string, DateTime> commandThrottle;
+
+        private DateTime launchTime;
+
 
         public void Launch()
         {
@@ -71,6 +74,9 @@ namespace DiscordBot
             //Set up the command throttle
             commandThrottle = new Dictionary<string, DateTime>();
 
+            //Record the launch time
+            launchTime = DateTime.Now;
+
             //Set up the Commands
             CommandSetup();
 
@@ -90,6 +96,72 @@ namespace DiscordBot
                     {
                         Configuration.LogMessage("[Command] " + e.User.Name + " is checking the version number");
                         await e.Channel.SendMessage("The current version number of ManBOsT is: " + Configuration.VersionNo);
+                    }
+                });
+
+            //Display Uptime
+            discordClient.GetService<CommandService>().CreateCommand("uptime")
+                .Alias(new string[] { "up" })
+                .Description("Posts how long the bot has been up")
+                .Do(async e =>
+                {
+                    if (!TestForThrottle("uptime", e.User.Name))
+                    {
+                        TimeSpan uptime = DateTime.Now - launchTime;
+                        Configuration.LogMessage("[Command] " + e.User.Name + " is checking the uptime");
+                        await e.Channel.SendMessage("I have been up for " + uptime.ToString("d'd 'h'h 'm'm 's's'") + ", and was launched on " + launchTime.ToString());
+                    }
+                });
+
+            //User Info
+            discordClient.GetService<CommandService>().CreateCommand("userinfo")
+                .Alias(new string[] { "user" })
+                .Description("Get the info of the user mentioned, or the one who made the request if none was specified")
+                .Parameter("UserTag", ParameterType.Optional)
+                .Do(async e =>
+                {
+                    if (!TestForThrottle("userinfo", e.User.Name))
+                    {
+                        if (string.IsNullOrWhiteSpace(e.Args[0]))
+                        {
+                            //Themselves
+                            Configuration.LogMessage("[Command] " + e.User.Name + " is getting information about themselves");
+                            await e.Channel.SendMessage(GetUserInfo(e.User));
+                        }
+                        else
+                        {
+                            //Other User
+                            Configuration.LogMessage("[Command] " + e.User.Name + " is getting information about " + e.GetArg("UserTag"));
+                            User target = e.Message.MentionedUsers.FirstOrDefault();
+
+                            await e.Channel.SendMessage(GetUserInfo(target));
+                        }
+                    }
+                });
+
+            //Channel Info
+            discordClient.GetService<CommandService>().CreateCommand("channelinfo")
+                .Alias(new string[] { "channel" })
+                .Description("Get the info of the channel mentioned, or the current one if none was specified")
+                .Parameter("ChannelName", ParameterType.Optional)
+                .Do(async e =>
+                {
+                    if(!TestForThrottle("channelinfo", e.User.Name))
+                    {
+                        if (string.IsNullOrWhiteSpace(e.Args[0]))
+                        {
+                            //This channel
+                            Configuration.LogMessage("[Command] " + e.User.Name + " is getting information about " + e.Channel.Name);
+                            await e.Channel.SendMessage(GetChannelInfo(e.Channel));
+                        }
+                        else
+                        {
+                            //Other channel
+                            Configuration.LogMessage("[Command] " + e.User.Name + " is getting information about " + e.GetArg("ChannelName"));
+                            Channel target = e.Message.MentionedChannels.FirstOrDefault();
+
+                            await e.Channel.SendMessage(GetChannelInfo(target));
+                        }
                     }
                 });
         }
@@ -178,6 +250,50 @@ namespace DiscordBot
                     }
                 }
             });
+        }
+
+        private string GetUserInfo(User user)
+        {
+            if (user != null)
+            {
+                //Format the user's information
+                string message = "**Name:** " + user.Name + "\n" +
+                     "**Server Nickname:** " + user.Nickname + "\n" +
+                     "**Discord ID:** " + user.Id + "\n" +
+                     "**Avatar:** " + user.AvatarUrl + "\n" +
+                     "**Roles:** ";
+                foreach (var role in user.Roles)
+                {
+                    message += "`" + role.Name + "` ";
+                }
+
+                return message;
+            }
+            else
+            {
+                return "Could not find a user by that name, make sure to mention the user requested with '@'";
+            }
+        }
+
+        private string GetChannelInfo(Channel channel)
+        {
+            if (channel != null)
+            {
+                string message = "**Name:** " + channel.Name + "\n" +
+                    "**Discord ID:** " + channel.Id + "\n" +
+                    "**Topic:** " + channel.Topic + "\n" +
+                    "**Position in Server:** " + channel.Position + "\n";
+                if (channel.Messages.FirstOrDefault() != null)
+                {
+                    message += "**Latest Message:** `" + channel.Messages.FirstOrDefault() + "`";
+                }
+
+                return message;
+            }
+            else
+            {
+                return "Could not find a channel by that name, make sure to mention the channel requested with '#'";
+            }
         }
 
         public static bool TestForThrottle(string commandName, string user)
