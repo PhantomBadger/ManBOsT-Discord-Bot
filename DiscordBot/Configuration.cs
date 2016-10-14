@@ -1,40 +1,32 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
 using System.IO;
 
 namespace DiscordBot
 {
     class Configuration
     {
-        public char Prefix { get; set; }
+        public char Prefix { get; set; } = '!';
         public string DiscordToken { get; set; }
         public string YouTubeToken { get; set; }
-        public TimeSpan ThrottleLimit { get; set; }
+        public TimeSpan ThrottleLimit { get; set; } = new TimeSpan(0, 0, 2);
         public static int MaxLogCharLength { get; set; } = 70;
-        public static double VersionNo { get; set; } = 1.2;
+        public static string VersionNo { get; } = "1.3.2";
+        public string OverwatchHeroesFile { get; set; } = "DiscordBot_OWHeroes.txt";
+        public string ADVideoFile { get; set; } = "DiscordBot_AuntyDonnaVideos.txt";
+        public string ADQuoteFile { get; set; } = "DiscordBot_AuntyDonnaQuotes.txt";
+        public string ADActiveQuotesFile { get; set; } = "DiscordBot_AuntyDonnaActiveQuotes.txt";
+        public int ADMaxVidCount { get; set; } = 100;
 
         public Configuration()
         {
             Prefix = '!';
             DiscordToken = "";
             YouTubeToken = "";
-            ThrottleLimit = new TimeSpan(0, 0, 2);
         }
 
         public void WriteConfig(string filename)
         {
-            /*
-            if (!File.Exists(filename))
-            {
-                File.Create(filename).Close();
-            }
-            
-            File.WriteAllText(filename, JsonConvert.SerializeObject(this, Formatting.Indented));
-            */
             using (StreamWriter sw = new StreamWriter(filename))
             {
                 //Write the header
@@ -46,11 +38,21 @@ namespace DiscordBot
                 sw.WriteLine("// Any incorrectly formatted properties will be ignored");
                 sw.WriteLine("///////////////////////////////////////////////////////");
                 sw.WriteLine();
+                sw.WriteLine("// General");
                 sw.WriteLine("Prefix:\t\t\t" + Prefix);
                 sw.WriteLine("DiscordToken:\t\t" + DiscordToken);
                 sw.WriteLine("YouTubeToken:\t\t" + YouTubeToken);
                 sw.WriteLine("ThrottleLimit:\t\t" + ThrottleLimit.ToString());
                 sw.WriteLine("MaxLogCharLength:\t" + MaxLogCharLength);
+                sw.WriteLine();
+                sw.WriteLine("// Overwatch");
+                sw.WriteLine("HeroesFile:\t\t" + OverwatchHeroesFile);
+                sw.WriteLine();
+                sw.WriteLine("// AuntyDonna");
+                sw.WriteLine("VideoFile:\t\t" + ADVideoFile);
+                sw.WriteLine("QuoteFile:\t\t" + ADQuoteFile);
+                sw.WriteLine("ActiveQuoteFile:\t" + ADActiveQuotesFile);
+                sw.WriteLine("MaxVidCount:\t\t" + ADMaxVidCount);
             }
         }
 
@@ -108,6 +110,27 @@ namespace DiscordBot
                                     break;
                                 }
                                 MaxLogCharLength = outLogCharLength;
+                                break;
+                            case "heroesfile":
+                                OverwatchHeroesFile = propVal;
+                                break;
+                            case "videofile":
+                                ADVideoFile = propVal;
+                                break;
+                            case "quotefile":
+                                ADQuoteFile = propVal;
+                                break;
+                            case "activequotefile":
+                                ADActiveQuotesFile = propVal;
+                                break;
+                            case "maxvidcount":
+                                int outVidCount;
+                                if (!int.TryParse(propVal, out outVidCount))
+                                {
+                                    //Incorrectly formatted, so leave default
+                                    break;
+                                }
+                                ADMaxVidCount = outVidCount;
                                 break;
 
                         }

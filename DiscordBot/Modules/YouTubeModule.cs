@@ -43,7 +43,7 @@ namespace DiscordBot
             //Set up the YT Service
             YouTubeService ytService = new YouTubeService(new BaseClientService.Initializer()
             {
-                ApiKey = BotHandler.config.YouTubeToken,
+                ApiKey = BotHandler.Config.YouTubeToken,
                 ApplicationName = this.GetType().ToString()
             });
 

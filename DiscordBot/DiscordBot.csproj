@@ -148,6 +148,7 @@
     <Compile Include="Modules\AdminModule.cs" />
     <Compile Include="Modules\AuntyDonnaModule.cs" />
     <Compile Include="Modules\HummingbirdModule.cs" />
+    <Compile Include="Modules\OverwatchModule.cs" />
     <Compile Include="Modules\YouTubeModule.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

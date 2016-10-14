@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using System.Net.Http;
 using System.Net;
+using System.Diagnostics;
 
 namespace DiscordBot
 {
@@ -62,90 +63,59 @@ namespace DiscordBot
                 {
                     if (!BotHandler.TestForThrottle("animesearch", e.User.Name))
                     {
-                        await e.Channel.SendMessage(SearchForAnime(e.GetArg("Query"), e));
+                        Configuration.LogMessage("[Command] " + e.User.Name + " is searching for Anime using the query: " + e.GetArg("Query"));
+                        
+                        //Use a stopwatch for some diagnostics
+                        Stopwatch sw = new Stopwatch();
+                        sw.Start();
+
+                        //Create the Request URL
+                        string requestUrl = @"http://hummingbird.me/api/v1/search/anime/?query=";
+                        requestUrl += e.GetArg("Query").Trim().Replace(" ", "+");
+
+                        //Get the array response
+                        Anime[] response = BotHandler.PerformRESTCall<Anime[]>(requestUrl);
+
+                        //Make sure we actually /got/ a response
+                        if (response == null || response.Length <= 0)
+                        {
+                            Configuration.LogMessage("[Command] Couldn't find any anime with that query");
+                            await e.Channel.SendMessage("Cannot find any anime by that name");
+                            return;
+                        }
+
+                        Anime foundAnime = response[0];
+
+                        await e.Channel.SendMessage(FormatAnime(foundAnime, sw.Elapsed));
+
+                        sw.Stop();
                     }
                 });
             });
         }
 
-        private string SearchForAnime(string query, CommandEventArgs e)
+        private string FormatAnime(Anime response, TimeSpan timeTaken)
         {
-            try
+            string message = "**MAL:** " + response.mal_id + "\n" +
+                             "**Title:** " + response.title + "\n" +
+                             "**Status:** " + response.status + "\n" +
+                             "**Episode Count:** " + response.episode_count + "\n" +
+                             "**Community Rating:** " + response.community_rating + "\n" +
+                             "**URL:** " + response.url + "\n" +
+                             "**Synopsis:** " + response.synopsis + "\n" +
+                             "**Genres:** ";
+
+            for (int i = 0; i < response.genres.Count(); i++)
             {
-                //Output Log Message
-                Configuration.LogMessage("[Command] " + e.User.Name + " searched Hummingbird for '" + query + "'");
-
-                //Construct our web request url
-                string requestUrl = @"http://hummingbird.me/api/v1/search/anime/?query=";
-                requestUrl += query.Trim().Replace(" ", "+");
-
-                //Create the web request
-                HttpWebRequest request = WebRequest.CreateHttp(requestUrl);
-
-                //Get the response and dispose of it when we're done via 'using'
-                using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+                message += "`" + response.genres[i].name + "`";
+                if (i != response.genres.Count() - 1)
                 {
-                    //Check to make sure it went through ok
-                    //If it isnt, our status code wont be ok
-                    if (response.StatusCode != HttpStatusCode.OK)
-                    {
-                        //Throw an exception, it'll be caught by the catch down below
-                        throw new Exception(String.Format("Server error (HTTP {0}: {1}).",
-                                                          response.StatusCode,
-                                                          response.StatusDescription));
-                    }
-
-                    Anime[] responseObj;
-
-                    //Attach to the response stream with a stream reader
-                    using (StreamReader sr = new StreamReader(response.GetResponseStream()))
-                    {
-                        //Use the Newtonsoft JSON Convert to deserialise it out of JSON
-                        using (JsonTextReader jsonReader = new JsonTextReader(sr))
-                        {
-                            JsonSerializer ser = new JsonSerializer
-                            {
-                                NullValueHandling = NullValueHandling.Ignore,
-                                MissingMemberHandling = MissingMemberHandling.Ignore
-                            };
-                            responseObj = ser.Deserialize<Anime[]>(jsonReader);
-                        }
-                    }
-
-                    if (responseObj.Length <= 0)
-                    {
-                        Configuration.LogMessage("[Command] Couldn't find any anime with that query");
-                        return "Cannot find any anime by that name";
-                    }
-
-                    Anime foundAnime = responseObj[0];
-
-                    string message =
-                        "**MAL:** " + foundAnime.mal_id + "\n" +
-                        "**Title:** " + foundAnime.title + "\n" +
-                        "**Status:** " + foundAnime.status + "\n" +
-                        "**Episode Count:** " + foundAnime.episode_count + "\n" +
-                        "**Community Rating:** " + foundAnime.community_rating + "\n" +
-                        "**URL:** " + foundAnime.url + "\n" +
-                        "**Synopsis:** " + foundAnime.synopsis + "\n" +
-                        "**Genres:** ";
-
-                    for(int i = 0; i < foundAnime.genres.Count(); i++)
-                    {
-                        message += "`" + foundAnime.genres[i].name + "`";
-                        if (i != foundAnime.genres.Count() -1)
-                        {
-                            message += ", ";
-                        }
-                    }
-                    return message;
+                    message += ", ";
                 }
             }
-            catch(Exception ex)
-            {
-                Configuration.LogMessage("[Command] Anime Search Failed, Exception: " + ex.Message);
-                return ex.Message;
-            }
+
+            message += "\n\n*This API Call took: " + timeTaken.TotalSeconds + " seconds.*";
+            return message;
         }
     }
 }

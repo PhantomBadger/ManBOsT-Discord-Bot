@@ -9,16 +9,17 @@ using Discord.Modules;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
+using System.Net;
 
 namespace DiscordBot
 {
     class BotHandler
     {
-        DiscordClient discordClient;
-        public static Configuration config;
+        private DiscordClient discordClient;
+        public static Configuration Config { get; set; }
 
         const string configFileName = "DiscordBot_Config.txt";
-        public static Dictionary<string, DateTime> commandThrottle;
+        public static Dictionary<string, DateTime> CommandThrottle { get; set; }
 
         private DateTime launchTime;
 
@@ -26,20 +27,20 @@ namespace DiscordBot
         public void Launch()
         {
             //Load up the Config File
-            config = new Configuration();
+            Config = new Configuration();
             if (!File.Exists(configFileName))
             {
                 //Make a new Config File
-                config.UserSetup();
+                Config.UserSetup();
             }
             else
             {
                 //Load up the existing one
-                config.LoadConfig(configFileName);
+                Config.LoadConfig(configFileName);
                 Configuration.LogMessage("[Setup] Loaded Config File!");
                 
             }
-            config.WriteConfig(configFileName);
+            Config.WriteConfig(configFileName);
 
             //Create the client
             discordClient = new DiscordClient();
@@ -47,7 +48,7 @@ namespace DiscordBot
             //Setup the client's command stuff
             discordClient.UsingCommands(x =>
             {
-                x.PrefixChar = config.Prefix;
+                x.PrefixChar = Config.Prefix;
                 x.HelpMode = HelpMode.Public;
             });
 
@@ -70,9 +71,10 @@ namespace DiscordBot
             discordClient.AddModule<AuntyDonnaModule>();
             discordClient.AddModule<HummingbirdModule>();
             discordClient.AddModule<YouTubeModule>();
+            discordClient.AddModule<OverwatchModule>();
 
             //Set up the command throttle
-            commandThrottle = new Dictionary<string, DateTime>();
+            CommandThrottle = new Dictionary<string, DateTime>();
 
             //Record the launch time
             launchTime = DateTime.Now;
@@ -233,7 +235,7 @@ namespace DiscordBot
                     try
                     {
                         //Connect to the Discord server using our email and password
-                        await discordClient.Connect(config.DiscordToken, TokenType.Bot);
+                        await discordClient.Connect(Config.DiscordToken, TokenType.Bot);
 
                         //Set the starting game
                         discordClient.SetGame("Petz 5");
@@ -298,12 +300,12 @@ namespace DiscordBot
 
         public static bool TestForThrottle(string commandName, string user)
         {
-            if (commandThrottle.ContainsKey(commandName))
+            if (CommandThrottle.ContainsKey(commandName))
             {
                 //Throttle the command if it's less than our throttle limit
-                if (DateTime.Now - commandThrottle[commandName] > config.ThrottleLimit)
+                if (DateTime.Now - CommandThrottle[commandName] > Config.ThrottleLimit)
                 {
-                    commandThrottle[commandName] = DateTime.Now;
+                    CommandThrottle[commandName] = DateTime.Now;
                     return false;
                 }
                 else
@@ -314,14 +316,59 @@ namespace DiscordBot
             }
             else
             {
-                if (commandThrottle == null)
+                if (CommandThrottle == null)
                 {
-                    commandThrottle = new Dictionary<string, DateTime>();
+                    CommandThrottle = new Dictionary<string, DateTime>();
                 }
 
                 //Add the command to our dictionary
-                commandThrottle.Add(commandName, DateTime.Now);
+                CommandThrottle.Add(commandName, DateTime.Now);
                 return false;
+            }
+        }
+
+        public static T PerformRESTCall<T>(string requestUrl)
+        {
+            try
+            {
+                //create web request
+                HttpWebRequest request = WebRequest.CreateHttp(requestUrl);
+
+                //Get response
+                using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+                {
+                    if (response.StatusCode != HttpStatusCode.OK)
+                    {
+                        //Throw an exception, it'll be caught by the catch down below
+                        throw new Exception(String.Format("Server error (HTTP {0}: {1}).",
+                                                          response.StatusCode,
+                                                          response.StatusDescription));
+                    }
+
+                    T responseObj;
+
+                    //Attach to the response stream with a stream reader
+                    using (StreamReader sr = new StreamReader(response.GetResponseStream()))
+                    {
+                        //Use the Newtonsoft JSON Convert to deserialise it out of JSON
+                        using (JsonTextReader jsonReader = new JsonTextReader(sr))
+                        {
+                            JsonSerializer ser = new JsonSerializer
+                            {
+                                NullValueHandling = NullValueHandling.Ignore,
+                                MissingMemberHandling = MissingMemberHandling.Ignore
+                            };
+                            responseObj = ser.Deserialize<T>(jsonReader);
+                        }
+                    }
+
+                    return responseObj;
+                }
+            }
+            catch (Exception ex)
+            {
+                Configuration.LogMessage("[Error] REST API Exception: " + ex.Message);
+                return default(T);
             }
         }
     }

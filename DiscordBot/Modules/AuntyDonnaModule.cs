@@ -18,14 +18,10 @@ namespace DiscordBot
     {
         private ModuleManager moduleManager;
         private DiscordClient discordClient;
-
-        const string adVideoFileName = "DiscordBot_AuntyDonnaVideos.txt";
+        
         TimeSpan maxTimeStampAge = new TimeSpan(14, 0, 0, 0); //A week before reloading
         List<string> auntyDonnaVideoCollection;
-        int maxVideoCount = 100;
 
-        const string adQuoteFileName = "DiscordBot_AuntyDonnaQuotes.txt";
-        const string adActiveQuoteFileName = "DiscordBot_AuntyDonnaActiveQuotes.txt";
         public const string pendingReplyFormat = @"^ *[yn] \d* *$";
         Dictionary<ulong, string> activeQuotes;
 
@@ -162,7 +158,7 @@ namespace DiscordBot
         {
             List<string> quotes = new List<string>();
 
-            using (StreamReader sr = new StreamReader(adQuoteFileName))
+            using (StreamReader sr = new StreamReader(BotHandler.Config.ADQuoteFile))
             {
                 while (sr.Peek() >= 0)
                 {
@@ -230,7 +226,7 @@ namespace DiscordBot
                 string quote = activeQuotes[user.Id];
 
                 //Write to file
-                using (StreamWriter sw = new StreamWriter(adQuoteFileName, true))
+                using (StreamWriter sw = new StreamWriter(BotHandler.Config.ADQuoteFile, true))
                 {
                     sw.WriteLine(quote);
                 }
@@ -281,9 +277,9 @@ namespace DiscordBot
 
         private void LoadActiveQuotesFile()
         {
-            if (File.Exists(adActiveQuoteFileName))
+            if (File.Exists(BotHandler.Config.ADActiveQuotesFile))
             {
-                string json = File.ReadAllText(adActiveQuoteFileName, Encoding.UTF8);
+                string json = File.ReadAllText(BotHandler.Config.ADActiveQuotesFile, Encoding.UTF8);
                 Dictionary<ulong, string> tempDic = JsonConvert.DeserializeObject<Dictionary<ulong, string>>(json);
                 if (tempDic != null)
                 {
@@ -294,19 +290,21 @@ namespace DiscordBot
 
         private void UpdateActiveQuotesFile()
         {
-            File.WriteAllText(adActiveQuoteFileName, JsonConvert.SerializeObject(activeQuotes, Formatting.Indented));
+            File.WriteAllText(BotHandler.Config.ADActiveQuotesFile, JsonConvert.SerializeObject(activeQuotes, Formatting.Indented));
         }
 
         private void LoadAuntyDonnaVideoList()
         {
             //Check if the file exists
-            if (!File.Exists(adVideoFileName))
+            if (!File.Exists(BotHandler.Config.ADVideoFile))
             {
                 //Load up the videos and make the file
                 GetAllAuntyDonnaVideos().Wait();
             }
 
-            using (StreamReader sr = new StreamReader(adVideoFileName))
+            bool reload = false;
+
+            using (StreamReader sr = new StreamReader(BotHandler.Config.ADVideoFile))
             {
                 //First get the date, if it is from too long ago, we update the list
                 DateTime lastWriteTime;
@@ -315,7 +313,7 @@ namespace DiscordBot
                     Configuration.LogMessage("[ERROR] Time Stamp in Aunty Donna Video File isn't valid! Reloading files");
 
                     //Re-load in the urls
-                    GetAllAuntyDonnaVideos().Wait();
+                    reload = true;
                 }
 
                 //Check how long ago the timestamp is
@@ -324,9 +322,18 @@ namespace DiscordBot
                 {
                     Configuration.LogMessage("[Setup] Video Time Stamp from too long ago, reloading files");
                     //We need to reload in the videos, it's been too long brother!
-                    GetAllAuntyDonnaVideos().Wait();
+                    reload = true;
                 }
+            }
 
+            if (reload)
+            {
+                //We need to re-populate the file then add it to the list
+                GetAllAuntyDonnaVideos().Wait();
+            }
+
+            using (StreamReader sr = new StreamReader(BotHandler.Config.ADVideoFile))
+            {
                 //just grab the files and add them to our list
                 auntyDonnaVideoCollection = new List<string>();
 
@@ -341,11 +348,11 @@ namespace DiscordBot
 
         private async Task GetAllAuntyDonnaVideos()
         {
-            Configuration.LogMessage("[Setup] Getting around " + maxVideoCount + " total Aunty Donna Videos at the Ready!");
+            Configuration.LogMessage("[Setup] Getting around " + BotHandler.Config.ADMaxVidCount + " total Aunty Donna Videos at the Ready!");
             //Set up the YT Service
             YouTubeService ytService = new YouTubeService(new BaseClientService.Initializer()
             {
-                ApiKey = BotHandler.config.YouTubeToken,
+                ApiKey = BotHandler.Config.YouTubeToken,
                 ApplicationName = this.GetType().ToString()
             });
 
@@ -357,7 +364,7 @@ namespace DiscordBot
 
             bool repeating = false;
 
-            while (localCollection.Count <= maxVideoCount && !repeating)
+            while (localCollection.Count <= BotHandler.Config.ADMaxVidCount && !repeating)
             {
                 repeating = true;
 
@@ -392,7 +399,7 @@ namespace DiscordBot
             Configuration.LogMessage("[Setup] " + localCollection.Count + " Aunty Donna Videos collected");
 
             //Write to file
-            using (StreamWriter sw = new StreamWriter(adVideoFileName, false))
+            using (StreamWriter sw = new StreamWriter(BotHandler.Config.ADVideoFile, false))
             {
 
                 //Add the current date so we can check how long ago the file was updated
