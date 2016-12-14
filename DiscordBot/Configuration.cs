@@ -9,6 +9,7 @@ namespace DiscordBot
         public char Prefix { get; set; } = '!';
         public string DiscordToken { get; set; }
         public string YouTubeToken { get; set; }
+        public ulong AdminID { get; set; }
         public TimeSpan ThrottleLimit { get; set; } = new TimeSpan(0, 0, 2);
         public static int MaxLogCharLength { get; set; } = 70;
         public static string VersionNo { get; } = "1.3.2";
@@ -42,6 +43,7 @@ namespace DiscordBot
                 sw.WriteLine("Prefix:\t\t\t" + Prefix);
                 sw.WriteLine("DiscordToken:\t\t" + DiscordToken);
                 sw.WriteLine("YouTubeToken:\t\t" + YouTubeToken);
+                sw.WriteLine("AdminID:\t\t\t" + AdminID);
                 sw.WriteLine("ThrottleLimit:\t\t" + ThrottleLimit.ToString());
                 sw.WriteLine("MaxLogCharLength:\t" + MaxLogCharLength);
                 sw.WriteLine();
@@ -92,6 +94,14 @@ namespace DiscordBot
                                 break;
                             case "youtubetoken":
                                 YouTubeToken = propVal;
+                                break;
+                            case "adminid":
+                                ulong adminID = 0;
+                                if(!ulong.TryParse(propVal, out adminID))
+                                {
+                                    //Incorrectly Formatted, so let's just leave it default
+                                }
+                                AdminID = adminID;
                                 break;
                             case "throttlelimit":
                                 TimeSpan outThrottleLimit;

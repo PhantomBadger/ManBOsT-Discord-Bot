@@ -124,7 +124,7 @@ namespace DiscordBot
                 {
                     if (!TestForThrottle("userinfo", e.User.Name))
                     {
-                        if (string.IsNullOrWhiteSpace(e.Args[0]))
+                        if (string.IsNullOrWhiteSpace(e.GetArg("UserTag")))
                         {
                             //Themselves
                             Configuration.LogMessage("[Command] " + e.User.Name + " is getting information about themselves");
@@ -150,7 +150,7 @@ namespace DiscordBot
                 {
                     if(!TestForThrottle("channelinfo", e.User.Name))
                     {
-                        if (string.IsNullOrWhiteSpace(e.Args[0]))
+                        if (string.IsNullOrWhiteSpace(e.GetArg("ChannelName")))
                         {
                             //This channel
                             Configuration.LogMessage("[Command] " + e.User.Name + " is getting information about " + e.Channel.Name);
@@ -204,24 +204,12 @@ namespace DiscordBot
             {
                 if ((e.Before.VoiceChannel == null && e.After.VoiceChannel != null))
                 {
-                    //If Emma connects
-                    if (AdminModule.specificUsers.ContainsKey("emma") && e.After.Id == AdminModule.specificUsers["emma"])
+                    //If the user has a specific message mapped print that
+                    if (AdminModule.SpecificMessageMap.ContainsKey(e.After.Id))
                     {
-                        if (!TestForThrottle("helloemma", e.After.Name))
-                        {
-                            Configuration.LogMessage("[Event] Saying Hi to Emma");
-                            await e.After.Server.DefaultChannel.SendMessage("Hello, Slut! " + e.After.Mention);
-                        }
-                    }
-
-                    //If Liam connects
-                    if (AdminModule.specificUsers.ContainsKey("liam") && e.After.Id == AdminModule.specificUsers["liam"])
-                    {
-                        if (!TestForThrottle("helloliam", e.After.Name))
-                        {
-                            Configuration.LogMessage("[Event] Reminding Liam of UnrealScript");
-                            await e.After.Server.DefaultChannel.SendMessage("How's that UnrealScript going " + e.Before.Mention + "?");
-                        }
+                        //Print their message
+                        Configuration.LogMessage($"[Event] Saying Specific Message for {e.After.Name}");
+                        await e.After.Server.DefaultChannel.SendMessage($"{AdminModule.SpecificMessageMap[e.After.Id].Trim()} {e.After.Mention}");
                     }
                 }
             };

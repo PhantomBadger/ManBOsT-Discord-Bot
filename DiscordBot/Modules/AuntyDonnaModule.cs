@@ -117,7 +117,7 @@ namespace DiscordBot
                     if (e.Message.Channel.IsPrivate)
                     {
                         //If it is from the dev
-                        if (AdminModule.specificUsers.ContainsKey("dev") && e.Message.User.Id == AdminModule.specificUsers["dev"] && !BotHandler.TestForThrottle("pendingquoteresponse", e.User.Name))
+                        if (e.Message.User.Id == BotHandler.Config.AdminID && !BotHandler.TestForThrottle("pendingquoteresponse", e.User.Name))
                         {
                             //Check to see if the message follows the format required to approve a quote
                             if (Regex.IsMatch(e.Message.Text, AuntyDonnaModule.pendingReplyFormat))
@@ -201,19 +201,12 @@ namespace DiscordBot
                 return "You may only have one quote available for consideration at a time. You fuck.";
             }
             //Send a message to the Dev ID
-            if (AdminModule.specificUsers.ContainsKey("dev"))
-            {
-                e.Channel.GetUser(AdminModule.specificUsers["dev"]).SendMessage(e.User + " (" + e.User.Id + ") has suggested the quote:\n" + quote +
-                    "\nPlease reply with either 'y' or 'n' followed by the User Id who suggested the quote, eg 'y 124225617133568001'");
-                activeQuotes.Add(e.User.Id, quote);
-                UpdateActiveQuotesFile();
+            e.Channel.GetUser(BotHandler.Config.AdminID).SendMessage(e.User + " (" + e.User.Id + ") has suggested the quote:\n" + quote +
+                "\nPlease reply with either 'y' or 'n' followed by the User Id who suggested the quote, eg 'y 124225617133568001'");
+            activeQuotes.Add(e.User.Id, quote);
+            UpdateActiveQuotesFile();
 
-                return "Your Quote has been sent to an Admin for approval. You fuck.";
-            }
-            else
-            {
-                return "There is no 'dev' in the specific users file, please add one";
-            }
+            return "Your Quote has been sent to an Admin for approval. You fuck.";
         }
 
         private string ResolveAuntyDonnaSuggestion(User user, string response)

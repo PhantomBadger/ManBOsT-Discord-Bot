@@ -64,6 +64,18 @@ namespace DiscordBot
         }
         #endregion
 
+        #region LootBox Hero Structs
+
+        private string requestedHeroName = "Tracer";
+
+        struct LootBox_HeroResponse
+        {
+            //[JsonProperty($"{requestedHeroName}")]
+            public string hero;
+        }
+
+        #endregion
+
         enum HeroRoles { Offense, Defense, Tank, Support, None };
 
         struct OverwatchHero
@@ -117,8 +129,56 @@ namespace DiscordBot
                     }
                 });
 
+                /*
+                cgb.CreateCommand("heroinfo")
+                .Alias(new string[] { "gethero" })
+                .Description("Gets the given player's stats with the specified hero for the specified game mode (either `competitiveplay` or `quickplay`, will default to competitive). Provided Battle.Net ID should be in `name#id` format, eg. `Test#1234`")
+                .Parameter("BattleID", ParameterType.Required)
+                .Parameter("HeroName", ParameterType.Required)
+                .Parameter("GameMode", ParameterType.Optional)
+                .Do(e =>
+                {
+                    if (!BotHandler.TestForThrottle("heroinfo", e.User.Name))
+                    {
+                        Configuration.LogMessage($"[Command] {e.User.Name} is getting info on {e.GetArg("BattleID")}'s {e.GetArg("GameMode")} {e.GetArg("HeroName")}");
+
+                        //Start our API timer
+                        Stopwatch sw = new Stopwatch();
+                        sw.Start();
+
+                        //Store a placeholder message to edit later
+                        Message message = e.Channel.SendMessage("Requesting info from LootBox Servers, Please Wait...").Result;
+
+                        //Get Args
+                        string battleID = e.GetArg("BattleID").Replace('#', '-');
+                        string gamemode = e.GetArg("GameMode");
+                        if (string.IsNullOrWhiteSpace(gamemode))
+                        {
+                            gamemode = "competitiveplay";
+                        }
+                        string hero = e.GetArg("HeroName");
+
+                        //Make sure the hero is in Title case
+                        hero = hero[0].ToString().ToUpper() + hero.Substring(1).ToLower();
+
+                        //Create request URL
+                        string requestUrl = $"https://api.lootbox.eu/pc/eu/{battleID}/{gamemode}/hero/{hero}";
+
+                        //TODO:
+                        //Make response structs - http://stackoverflow.com/questions/13517792/deserializing-json-with-dynamic-keys
+                        //Format response struct
+                        //Edit message
+                        Console.WriteLine("a");
+                        dynamic responseObj = BotHandler.PerformRESTCall<dynamic>(requestUrl);
+                        Console.WriteLine("b");
+
+                        sw.Stop();
+                    }
+                });*/
+
                 //Get Random Hero
                 cgb.CreateCommand("randomhero")
+                .Alias(new string[] { "rh", "hero" })
                 .Description("Gives a random hero for the user to play, Optional parameter of `Offense`, `Defense`, `Tank`, and `Support`")
                 .Parameter("Role", ParameterType.Optional)
                 .Do(async e =>
@@ -127,12 +187,11 @@ namespace DiscordBot
                     {
                         LoadOverwatchHeroes(BotHandler.Config.OverwatchHeroesFile);
 
-                        bool arg = false;
                         HeroRoles roleFilter = HeroRoles.None;
+
+                        //Get the Role Filter
                         if (!string.IsNullOrWhiteSpace(e.GetArg("Role")))
                         {
-                            arg = true;
-
                             try
                             {
                                 roleFilter = (HeroRoles)Enum.Parse(typeof(HeroRoles), e.GetArg("Role"), true);
@@ -140,12 +199,11 @@ namespace DiscordBot
                             catch
                             {
                                 await e.Channel.SendMessage("I dont recognise the role " + e.GetArg("Role") + ", giving you a random hero of any role instread.");
-                                arg = false;
                                 roleFilter = HeroRoles.None;
                             }
                         }
 
-                        if (!arg)
+                        if (roleFilter == HeroRoles.None)
                         {
                             Configuration.LogMessage("[Command] " + e.User.Name + " is requesting a random Overwatch Hero");
                             //Pick a random hero from our list
@@ -177,20 +235,7 @@ namespace DiscordBot
                             await e.Channel.SendMessage(message);
                         }
                     }
-                });
-
-                /*
-                //Register for the Discord Leaderboard
-                cgb.CreateCommand("leaderboardregister")
-                .Alias(new string[] { "register" })
-                .Description("Registers the given Overwatch account for the Discord Leaderboard")
-                .Parameter("BattleID", ParameterType.Required)
-                .Do(e =>
-                {
-
-                });
-                */
-                
+                });                
             });
         }
 
